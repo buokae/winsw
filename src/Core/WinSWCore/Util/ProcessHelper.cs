@@ -1,10 +1,14 @@
-﻿using log4net;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+#if !FEATURE_CIM
 using System.Management;
-using System.Text;
+#endif
 using System.Threading;
+using log4net;
+#if FEATURE_CIM
+using Microsoft.Management.Infrastructure;
+#endif
 
 namespace winsw.Util
 {
@@ -24,21 +28,34 @@ namespace winsw.Util
         public static List<int> GetChildPids(int pid)
         {
             var childPids = new List<int>();
-            
-            try {
-                var searcher = new ManagementObjectSearcher("Select * From Win32_Process Where ParentProcessID=" + pid);
-                foreach (var mo in searcher.Get())
+
+            try
+            {
+                string query = "SELECT * FROM Win32_Process WHERE ParentProcessID = " + pid;
+#if FEATURE_CIM
+                using CimSession session = CimSession.Create(null);
+                foreach (CimInstance instance in session.QueryInstances("root/cimv2", "WQL", query))
                 {
-                    var childProcessId = mo["ProcessID"];
-                    Logger.Info("Found child process: " + childProcessId + " Name: " + mo["Name"]);
+                    object childProcessId = instance.CimInstanceProperties["ProcessID"].Value;
+                    Logger.Info("Found child process: " + childProcessId + " Name: " + instance.CimInstanceProperties["Name"].Value);
                     childPids.Add(Convert.ToInt32(childProcessId));
                 }
+#else
+                using ManagementObjectSearcher searcher = new ManagementObjectSearcher(query);
+                using ManagementObjectCollection results = searcher.Get();
+                foreach (ManagementBaseObject wmiObject in results)
+                {
+                    var childProcessId = wmiObject["ProcessID"];
+                    Logger.Info("Found child process: " + childProcessId + " Name: " + wmiObject["Name"]);
+                    childPids.Add(Convert.ToInt32(childProcessId));
+                }
+#endif
             }
             catch (Exception ex)
             {
                 Logger.Warn("Failed to locate children of the process with PID=" + pid + ". Child processes won't be terminated", ex);
             }
-            
+
             return childPids;
         }
 
@@ -66,7 +83,7 @@ namespace winsw.Util
             bool successful = SigIntHelper.SendSIGINTToProcess(proc, stopTimeout);
             if (successful)
             {
-                Logger.Info("SIGINT to" + pid + " successful");
+                Logger.Info("SIGINT to " + pid + " successful");
             }
             else
             {
@@ -87,7 +104,7 @@ namespace winsw.Util
                 }
             }
 
-            //TODO: Propagate error if process kill fails? Currently we use the legacy behavior
+            // TODO: Propagate error if process kill fails? Currently we use the legacy behavior
         }
 
         /// <summary>
@@ -100,7 +117,7 @@ namespace winsw.Util
         public static void StopProcessAndChildren(int pid, TimeSpan stopTimeout, bool stopParentProcessFirst)
         {
             if (!stopParentProcessFirst)
-            {         
+            {
                 foreach (var childPid in GetChildPids(pid))
                 {
                     StopProcessAndChildren(childPid, stopTimeout, stopParentProcessFirst);
@@ -131,14 +148,23 @@ namespace winsw.Util
         /// <param name="callback">Completion callback. If null, the completion won't be monitored</param>
         /// <param name="logHandler">Log handler. If enabled, logs will be redirected to the process and then reported</param>
         /// <param name="redirectStdin">Redirect standard input</param>
-        public static void StartProcessAndCallbackForExit(Process processToStart, String executable = null, string arguments = null, Dictionary<string, string> envVars = null,
-            string workingDirectory = null, ProcessPriorityClass? priority = null, ProcessCompletionCallback callback = null, bool redirectStdin = true, LogHandler logHandler = null)
+        public static void StartProcessAndCallbackForExit(
+            Process processToStart,
+            string? executable = null,
+            string? arguments = null,
+            Dictionary<string, string>? envVars = null,
+            string? workingDirectory = null,
+            ProcessPriorityClass? priority = null,
+            ProcessCompletionCallback? callback = null,
+            bool redirectStdin = true,
+            LogHandler? logHandler = null,
+            bool hideWindow = false)
         {
             var ps = processToStart.StartInfo;
             ps.FileName = executable ?? ps.FileName;
             ps.Arguments = arguments ?? ps.Arguments;
             ps.WorkingDirectory = workingDirectory ?? ps.WorkingDirectory;
-            ps.CreateNoWindow = false;
+            ps.CreateNoWindow = hideWindow;
             ps.UseShellExecute = false;
             ps.RedirectStandardInput = redirectStdin;
             ps.RedirectStandardOutput = logHandler != null;
@@ -149,7 +175,7 @@ namespace winsw.Util
                 foreach (string key in envVars.Keys)
                 {
                     Environment.SetEnvironmentVariable(key, envVars[key]);
-                    // DONTDO: ps.EnvironmentVariables[key] = envs[key]; 
+                    // DONTDO: ps.EnvironmentVariables[key] = envs[key];
                     // bugged (lower cases all variable names due to StringDictionary being used, see http://connect.microsoft.com/VisualStudio/feedback/ViewFeedback.aspx?FeedbackID=326163)
                 }
             }
@@ -157,8 +183,8 @@ namespace winsw.Util
             processToStart.Start();
             Logger.Info("Started process " + processToStart.Id);
 
-            if (priority != null && priority.Value != ProcessPriorityClass.Normal) 
-            { 
+            if (priority != null && priority.Value != ProcessPriorityClass.Normal)
+            {
                 processToStart.PriorityClass = priority.Value;
             }
 
@@ -166,13 +192,13 @@ namespace winsw.Util
             if (logHandler != null)
             {
                 Logger.Debug("Forwarding logs of the process " + processToStart + " to " + logHandler);
-                logHandler.log(processToStart.StandardOutput.BaseStream, processToStart.StandardError.BaseStream);
+                logHandler.log(processToStart.StandardOutput, processToStart.StandardError);
             }
 
             // monitor the completion of the process
             if (callback != null)
             {
-                StartThread(delegate
+                StartThread(() =>
                 {
                     processToStart.WaitForExit();
                     callback(processToStart);
@@ -187,7 +213,7 @@ namespace winsw.Util
         /// </summary>
         public static void StartThread(ThreadStart main)
         {
-            new Thread(delegate()
+            new Thread(() =>
             {
                 try
                 {

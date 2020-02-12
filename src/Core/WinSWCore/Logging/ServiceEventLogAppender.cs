@@ -1,9 +1,6 @@
-﻿using log4net.Appender;
+﻿using System.Diagnostics;
+using log4net.Appender;
 using log4net.Core;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 
 namespace winsw.Logging
 {
@@ -13,16 +10,16 @@ namespace winsw.Logging
     /// </summary>
     public class ServiceEventLogAppender : AppenderSkeleton
     {
+#pragma warning disable CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         public IServiceEventLogProvider provider { get; set; }
+#pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
 
         override protected void Append(LoggingEvent loggingEvent)
         {
-            EventLog eventLog = provider.locate();
-            if (eventLog != null)
-            {
-                // We write the event iff the provider is ready
-                eventLog.WriteEntry(loggingEvent.RenderedMessage, toEventLogEntryType(loggingEvent.Level));
-            }
+            EventLog? eventLog = provider.locate();
+
+            // We write the event iff the provider is ready
+            eventLog?.WriteEntry(loggingEvent.RenderedMessage, toEventLogEntryType(loggingEvent.Level));
         }
 
         private static EventLogEntryType toEventLogEntryType(Level level)
@@ -31,6 +28,7 @@ namespace winsw.Logging
             {
                 return EventLogEntryType.Error;
             }
+
             if (level.Value >= Level.Warn.Value)
             {
                 return EventLogEntryType.Warning;

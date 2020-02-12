@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using winsw.Logging;
+﻿using System.Diagnostics;
 
 namespace winsw.Logging
 {
@@ -11,11 +7,11 @@ namespace winsw.Logging
     /// </summary>
     public class WrapperServiceEventLogProvider : IServiceEventLogProvider
     {
-        public WrapperService service {get; set;}
+        public WrapperService? service { get; set; }
 
-        public EventLog locate()
+        public EventLog? locate()
         {
-            WrapperService _service = service;
+            WrapperService? _service = service;
             if (_service != null && !_service.IsShuttingDown)
             {
                 return _service.EventLog;

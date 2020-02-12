@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using JetBrains.Annotations;
 using winsw;
 
 namespace winswTests.Util
@@ -10,18 +9,18 @@ namespace winswTests.Util
     /// </summary>
     public static class CLITestHelper
     {
-        private const string SeedXml = "<service>"
-                                    + "<id>service.exe</id>"
-                                    + "<name>Service</name>"
-                                    + "<description>The service.</description>"
-                                    + "<executable>node.exe</executable>"
-                                    + "<arguments>My Arguments</arguments>"
-                                    + "<logmode>rotate</logmode>"
-                                    + "<workingdirectory>"
-                                    + @"C:\winsw\workdir"
-                                    + "</workingdirectory>"
-                                    + @"<logpath>C:\winsw\logs</logpath>"
-                                    + "</service>";
+        private const string SeedXml =
+@"<service>
+  <id>service.exe</id>
+  <name>Service</name>
+  <description>The service.</description>
+  <executable>node.exe</executable>
+  <arguments>My Arguments</arguments>
+  <logmode>rotate</logmode>
+  <workingdirectory>C:\winsw\workdir</workingdirectory>
+  <logpath>C:\winsw\logs</logpath>
+</service>";
+
         private static readonly ServiceDescriptor DefaultServiceDescriptor = ServiceDescriptor.FromXML(SeedXml);
 
         /// <summary>
@@ -31,18 +30,15 @@ namespace winswTests.Util
         /// <param name="descriptor">Optional Service descriptor (will be used for initializationpurposes)</param>
         /// <returns>STDOUT if there's no exceptions</returns>
         /// <exception cref="Exception">Command failure</exception>
-        [NotNull]
-        public static string CLITest(String[] args, ServiceDescriptor descriptor = null)
+        public static string CLITest(string[] args, ServiceDescriptor descriptor = null)
         {
-            using (StringWriter sw = new StringWriter())
-            {
-                TextWriter tmp = Console.Out;
-                Console.SetOut(sw);
-                WrapperService.Run(args, descriptor ?? DefaultServiceDescriptor);
-                Console.SetOut(tmp);
-                Console.Write(sw.ToString());
-                return sw.ToString();
-            }
+            using StringWriter sw = new StringWriter();
+            TextWriter tmp = Console.Out;
+            Console.SetOut(sw);
+            WrapperService.Run(args, descriptor ?? DefaultServiceDescriptor);
+            Console.SetOut(tmp);
+            Console.Write(sw.ToString());
+            return sw.ToString();
         }
 
         /// <summary>
@@ -51,8 +47,7 @@ namespace winswTests.Util
         /// <param name="args">CLI arguments to be passed</param>
         /// <param name="descriptor">Optional Service descriptor (will be used for initializationpurposes)</param>
         /// <returns>Test results</returns>
-        [NotNull]
-        public static CLITestResult CLIErrorTest(String[] args, ServiceDescriptor descriptor = null)
+        public static CLITestResult CLIErrorTest(string[] args, ServiceDescriptor descriptor = null)
         {
             StringWriter swOut, swErr;
             Exception testEx = null;
@@ -61,8 +56,9 @@ namespace winswTests.Util
 
             using (swOut = new StringWriter())
             using (swErr = new StringWriter())
+            {
                 try
-                {              
+                {
                     Console.SetOut(swOut);
                     Console.SetError(swErr);
                     WrapperService.Run(args, descriptor ?? DefaultServiceDescriptor);
@@ -85,7 +81,8 @@ namespace winswTests.Util
                         Console.WriteLine(testEx);
                     }
                 }
-                
+            }
+
             return new CLITestResult(swOut.ToString(), swErr.ToString(), testEx);
         }
     }
@@ -95,18 +92,15 @@ namespace winswTests.Util
     /// </summary>
     public class CLITestResult
     {
-        [NotNull]
-        public String Out { get; private set; }
-        
-        [NotNull]
-        public String Err { get; private set; }
-        
-        [CanBeNull]
+        public string Out { get; private set; }
+
+        public string Err { get; private set; }
+
         public Exception Exception { get; private set; }
 
-        public bool HasException { get { return Exception != null; } }
+        public bool HasException => Exception != null;
 
-        public CLITestResult(String output, String err, Exception exception = null)
+        public CLITestResult(string output, string err, Exception exception = null)
         {
             Out = output;
             Err = err;

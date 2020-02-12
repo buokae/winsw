@@ -1,14 +1,13 @@
-﻿using winsw;
-using NUnit.Framework;
-using winsw.Extensions;
-using winsw.Plugins.SharedDirectoryMapper;
-using winsw.Plugins.RunawayProcessKiller;
-using winswTests.Util;
-using System.IO;
-using System.Diagnostics;
-using winsw.Util;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using NUnit.Framework;
+using winsw;
+using winsw.Extensions;
+using winsw.Plugins.RunawayProcessKiller;
+using winsw.Util;
+using winswTests.Util;
 
 namespace winswTests.Extensions
 {
@@ -17,27 +16,27 @@ namespace winswTests.Extensions
     {
         ServiceDescriptor _testServiceDescriptor;
 
-        string testExtension = getExtensionClassNameWithAssembly(typeof(RunawayProcessKillerExtension));
-            
+        readonly string testExtension = GetExtensionClassNameWithAssembly(typeof(RunawayProcessKillerExtension));
+
         [SetUp]
         public void SetUp()
         {
-            string seedXml = "<?xml version=\"1.0\" encoding=\"utf-8\" ?>"
-                + "<service>                                                                                                        "
-                + "  <id>SERVICE_NAME</id>                                                                                          "
-                + "  <name>Jenkins Slave</name>                                                                                     "
-                + "  <description>This service runs a slave for Jenkins continuous integration system.</description>                "
-                + "  <executable>C:\\Program Files\\Java\\jre7\\bin\\java.exe</executable>                                               "
-                + "  <arguments>-Xrs  -jar \\\"%BASE%\\slave.jar\\\" -jnlpUrl ...</arguments>                                              "
-                + "  <logmode>rotate</logmode>                                                                                      "
-                + "  <extensions>                                                                                                   "
-                + "    <extension enabled=\"true\" className=\"" + testExtension + "\" id=\"killRunawayProcess\"> "
-                + "      <pidfile>foo/bar/pid.txt</pidfile>"
-                + "      <stopTimeout>5000</stopTimeout> "
-                + "      <stopParentFirst>true</stopParentFirst>"
-                + "    </extension>         "
-                + "  </extensions>                                                                                                  "
-                + "</service>";
+            string seedXml =
+$@"<service>
+  <id>SERVICE_NAME</id>
+  <name>Jenkins Slave</name>
+  <description>This service runs a slave for Jenkins continuous integration system.</description>
+  <executable>C:\Program Files\Java\jre7\bin\java.exe</executable>
+  <arguments>-Xrs  -jar \""%BASE%\slave.jar\"" -jnlpUrl ...</arguments>
+  <logmode>rotate</logmode>
+  <extensions>
+    <extension enabled=""true"" className=""{testExtension}"" id=""killRunawayProcess"">
+      <pidfile>foo/bar/pid.txt</pidfile>
+      <stopTimeout>5000</stopTimeout>
+      <stopParentFirst>true</stopParentFirst>
+    </extension>
+  </extensions>
+</service>";
             _testServiceDescriptor = ServiceDescriptor.FromXML(seedXml);
         }
 
@@ -71,28 +70,23 @@ namespace winswTests.Extensions
             var winswId = "myAppWithRunaway";
             var extensionId = "runawayProcessKiller";
             var tmpDir = FilesystemTestHelper.CreateTmpDirectory();
-            
-            // Prepare the env var
-            String varName = WinSWSystem.ENVVAR_NAME_SERVICE_ID;
-            var env = new Dictionary<string, string>();
-            env.Add("varName", winswId);
 
             // Spawn the test process
-            var scriptFile = Path.Combine(tmpDir, "dosleep.bat");
-            var envFile = Path.Combine(tmpDir, "env.txt");
-            File.WriteAllText(scriptFile, "set > " + envFile + "\nsleep 100500");
             Process proc = new Process();
             var ps = proc.StartInfo;
-            ps.FileName = scriptFile;
-            ProcessHelper.StartProcessAndCallbackForExit(proc, envVars: env);
+            ps.FileName = "cmd.exe";
+            ps.Arguments = "/c pause";
+            ps.UseShellExecute = false;
+            ps.RedirectStandardOutput = true;
+            ps.EnvironmentVariables[WinSWSystem.ENVVAR_NAME_SERVICE_ID] = winswId;
+            proc.Start();
 
             try
             {
                 // Generate extension and ensure that the roundtrip is correct
-                //TODO: checkWinSWEnvironmentVariable should be true, but it does not work due to proc.StartInfo.EnvironmentVariables
                 var pidfile = Path.Combine(tmpDir, "process.pid");
                 var sd = ConfigXmlBuilder.create(id: winswId)
-                    .WithRunawayProcessKiller(new RunawayProcessKillerExtension(pidfile, checkWinSWEnvironmentVariable: false), extensionId)
+                    .WithRunawayProcessKiller(new RunawayProcessKillerExtension(pidfile), extensionId)
                     .ToServiceDescriptor();
                 WinSWExtensionManager manager = new WinSWExtensionManager(sd);
                 manager.LoadExtensions();
@@ -100,11 +94,12 @@ namespace winswTests.Extensions
                 Assert.IsNotNull(extension, "RunawayProcessKillerExtension should be loaded");
                 Assert.AreEqual(pidfile, extension.Pidfile, "PidFile should have been retained during the config roundtrip");
 
-                // Inject PID 
+                // Inject PID
                 File.WriteAllText(pidfile, proc.Id.ToString());
 
                 // Try to terminate
                 Assert.That(!proc.HasExited, "Process " + proc + " has exited before the RunawayProcessKiller extension invocation");
+                _ = proc.StandardOutput.Read();
                 extension.OnWrapperStarted();
                 Assert.That(proc.HasExited, "Process " + proc + " should have been terminated by RunawayProcessKiller");
             }
@@ -120,7 +115,7 @@ namespace winswTests.Extensions
                         Console.Error.WriteLine("Test: ProcessHelper failed to properly terminate process with ID=" + proc.Id);
                     }
                 }
-            }   
+            }
         }
     }
 }

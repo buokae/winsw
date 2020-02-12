@@ -1,9 +1,7 @@
-﻿using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
+using System.Reflection;
 using System.Xml;
+using NUnit.Framework;
 using winsw;
 using winswTests.Util;
 
@@ -16,40 +14,41 @@ namespace winswTests.Configuration
     [TestFixture]
     class ExamplesTest
     {
-
         [Test]
-        public void allOptionsConfigShouldDeclareDefaults()
+        public void AllOptionsConfigShouldDeclareDefaults()
         {
-            ServiceDescriptor d = doLoad("allOptions");
+            ServiceDescriptor d = DoLoad("allOptions");
 
             Assert.AreEqual("myapp", d.Id);
             Assert.AreEqual("MyApp Service (powered by WinSW)", d.Caption);
-            Assert.AreEqual("This service is a service cratead from a sample configuration", d.Description);
+            Assert.AreEqual("This service is a service created from a sample configuration", d.Description);
             Assert.AreEqual("%BASE%\\myExecutable.exe", d.Executable);
 
             ServiceDescriptorAssert.AssertAllOptionalPropertiesAreDefault(d);
         }
 
         [Test]
-        public void minimalConfigShouldDeclareDefaults()
+        public void MinimalConfigShouldDeclareDefaults()
         {
-            ServiceDescriptor d = doLoad("minimal");
+            ServiceDescriptor d = DoLoad("minimal");
 
             Assert.AreEqual("myapp", d.Id);
             Assert.AreEqual("MyApp Service (powered by WinSW)", d.Caption);
-            Assert.AreEqual("This service is a service cratead from a minimal configuration", d.Description);
+            Assert.AreEqual("This service is a service created from a minimal configuration", d.Description);
             Assert.AreEqual("%BASE%\\myExecutable.exe", d.Executable);
 
             ServiceDescriptorAssert.AssertAllOptionalPropertiesAreDefault(d);
         }
 
-        private ServiceDescriptor doLoad(string exampleName) {
-            var dir = Directory.GetCurrentDirectory();
-            string path = dir + "\\..\\..\\..\\..\\..\\examples\\sample-" + exampleName + ".xml";
+        private ServiceDescriptor DoLoad(string exampleName)
+        {
+            var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            string path = Path.GetFullPath(dir + "\\..\\..\\..\\..\\..\\..\\examples\\sample-" + exampleName + ".xml");
             if (!File.Exists(path))
             {
                 throw new FileNotFoundException("Cannot find the XML file " + path, path);
             }
+
             XmlDocument dom = new XmlDocument();
             dom.Load(path);
             return new ServiceDescriptor(dom);

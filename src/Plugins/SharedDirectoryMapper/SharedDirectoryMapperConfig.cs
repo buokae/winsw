@@ -1,5 +1,4 @@
-﻿using System;
-using System.Xml;
+﻿using System.Xml;
 using winsw.Util;
 
 namespace winsw.Plugins.SharedDirectoryMapper
@@ -10,8 +9,8 @@ namespace winsw.Plugins.SharedDirectoryMapper
     public class SharedDirectoryMapperConfig
     {
         public bool EnableMapping { get; set; }
-        public String Label { get; set; }
-        public String UNCPath { get; set; }
+        public string Label { get; set; }
+        public string UNCPath { get; set; }
 
         public SharedDirectoryMapperConfig(bool enableMapping, string label, string uncPath)
         {

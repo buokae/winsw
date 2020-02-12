@@ -29,10 +29,16 @@ namespace winsw
 
         public enum PeriodicityType
         {
-            ERRONEOUS, TOP_OF_MILLISECOND, TOP_OF_SECOND, TOP_OF_MINUTE, TOP_OF_HOUR, TOP_OF_DAY
+            ERRONEOUS,
+            TOP_OF_MILLISECOND,
+            TOP_OF_SECOND,
+            TOP_OF_MINUTE,
+            TOP_OF_HOUR,
+            TOP_OF_DAY
         }
 
-        private static readonly PeriodicityType[] VALID_ORDERED_LIST = {
+        private static readonly PeriodicityType[] VALID_ORDERED_LIST =
+        {
             PeriodicityType.TOP_OF_MILLISECOND, PeriodicityType.TOP_OF_SECOND, PeriodicityType.TOP_OF_MINUTE, PeriodicityType.TOP_OF_HOUR, PeriodicityType.TOP_OF_DAY
         };
 
@@ -49,47 +55,43 @@ namespace winsw
                 DateTime next = periodicRollingCalendar.nextTriggeringTime(epoch, 1);
                 string r1 = next.ToString(_format);
 
-                if (r0 != null && r1 != null && !r0.Equals(r1))
+                if (r0 != r1)
                 {
                     return i;
                 }
             }
+
             return PeriodicityType.ERRONEOUS;
         }
 
-        private DateTime nextTriggeringTime(DateTime input, long increment)
+        private DateTime nextTriggeringTime(DateTime input, long increment) => periodicityType switch
         {
-            DateTime output;
-            switch (periodicityType)
-            {
-                case PeriodicityType.TOP_OF_MILLISECOND:
-                    output = new DateTime(input.Year, input.Month, input.Day, input.Hour, input.Minute, input.Second, input.Millisecond);
-                    output = output.AddMilliseconds(increment);
-                    return output;
-                case PeriodicityType.TOP_OF_SECOND:
-                    output = new DateTime(input.Year, input.Month, input.Day, input.Hour, input.Minute, input.Second);
-                    output = output.AddSeconds(increment);
-                    return output;
-                case PeriodicityType.TOP_OF_MINUTE:
-                    output = new DateTime(input.Year, input.Month, input.Day, input.Hour, input.Minute, 0);
-                    output = output.AddMinutes(increment);
-                    return output;
-                case PeriodicityType.TOP_OF_HOUR:
-                    output = new DateTime(input.Year, input.Month, input.Day, input.Hour, 0, 0);
-                    output = output.AddHours(increment);
-                    return output;
-                case PeriodicityType.TOP_OF_DAY:
-                    output = new DateTime(input.Year, input.Month, input.Day);
-                    output = output.AddDays(increment);
-                    return output;
-                default:
-                    throw new Exception("invalid periodicity type: " + periodicityType);
-            }
-        }
+            PeriodicityType.TOP_OF_MILLISECOND =>
+                new DateTime(input.Year, input.Month, input.Day, input.Hour, input.Minute, input.Second, input.Millisecond)
+                    .AddMilliseconds(increment),
+
+            PeriodicityType.TOP_OF_SECOND =>
+                new DateTime(input.Year, input.Month, input.Day, input.Hour, input.Minute, input.Second)
+                    .AddSeconds(increment),
+
+            PeriodicityType.TOP_OF_MINUTE =>
+                new DateTime(input.Year, input.Month, input.Day, input.Hour, input.Minute, 0)
+                    .AddMinutes(increment),
+
+            PeriodicityType.TOP_OF_HOUR =>
+                new DateTime(input.Year, input.Month, input.Day, input.Hour, 0, 0)
+                    .AddHours(increment),
+
+            PeriodicityType.TOP_OF_DAY =>
+                new DateTime(input.Year, input.Month, input.Day)
+                    .AddDays(increment),
+
+            _ => throw new Exception("invalid periodicity type: " + periodicityType),
+        };
 
         public PeriodicityType periodicityType { get; set; }
 
-        public Boolean shouldRoll
+        public bool shouldRoll
         {
             get
             {
@@ -100,17 +102,11 @@ namespace winsw
                     _nextRoll = nextTriggeringTime(now, _period);
                     return true;
                 }
+
                 return false;
             }
         }
 
-        public string format
-        {
-            get
-            {
-                return _currentRoll.ToString(_format);
-            }
-        }
-
+        public string format => _currentRoll.ToString(_format);
     }
 }

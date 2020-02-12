@@ -1,6 +1,4 @@
-﻿using System;
-using System.Xml;
-using winsw.Util;
+﻿using System.Xml;
 
 namespace winsw.Extensions
 {
@@ -8,7 +6,7 @@ namespace winsw.Extensions
     /// Interface for Win Service Wrapper Extension
     /// </summary>
     /// <remarks>
-    /// All implementations should provide the default empty constructor. 
+    /// All implementations should provide the default empty constructor.
     /// The initialization will be performed by Init methods.
     /// Binary comparibility of the class is not guaranteed in WinSW 2.
     /// </remarks>
@@ -17,7 +15,7 @@ namespace winsw.Extensions
         /// <summary>
         /// Extension name to be displayed in logs
         /// </summary>
-        String DisplayName { get; }
+        string DisplayName { get; }
 
         /// <summary>
         /// Extension descriptor

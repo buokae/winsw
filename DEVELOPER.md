@@ -3,10 +3,10 @@ WinSW Developer Information
 
 ### Build Environment
 
-* IDE: [Visual Studio Community 2013](http://www.visualstudio.com/en-us/news/vs2013-community-vs.aspx) (free for open-source projects)
-* `winsw_key.snk` should be available in the project's root in order to build the executable
- * You can generate the certificate in "Project Settings/Signing"
- * The certificate is in <code>.gitignore</code> list. Please do not add it to the repository
+* IDE: [Visual Studio Community 2019](https://visualstudio.microsoft.com/vs/) (free for open-source projects)
+* *winsw_key.snk* should be available in the project's root in order to build the executable
+* You can generate the certificate by running *generate-key.ps1*
+* The certificate is in *.gitignore* list. Please do not add it to the repository
 
 ### Testing
 
@@ -46,10 +46,5 @@ Then deploy changes to _GitHub Releases_ and NuGet using the available publisher
 ### Releasing to the Maven repository (legacy)
 
 Maven repository is no longer the main source of releases,
-but WinSW can be deployed there on-demand.
-Some projects (e.g. [Jenkins](https://jenkins.io)) still depend on WinSW from the Maven repository.
-
-1. Make sure you have passed the Release steps above
-2. Modify the `winsw.version` property to the the release version (`WINSW_VERSION`)
-3. Modify version field to `${WINSW_VERSION}-SNAPSHOT`
-4. Run `mvn release:prepare release:perform`
+but some projects still depend on WinSW from the Jenkins Maven repository.
+Maven Packaging repository can be found [here](https://github.com/jenkinsci/winsw-maven-packaging).

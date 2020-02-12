@@ -3,53 +3,51 @@ skip_tags: true
 skip_branch_with_pr: true
 
 # Project configuration
-image: Visual Studio 2013
-platform: Any CPU
-configuration: Release
+image: Visual Studio 2019
+# platform: Any CPU
+configuration:
+  - Debug
+  - Release
 
 # Automatically register private account and/or project AppVeyor NuGet feeds.
 nuget:
-  account_feed: true
-  project_feed: true
-  disable_publish_on_pr: true     # disable publishing of .nupkg artifacts to
+  disable_publish_on_pr: true     # disable publishing of .nupkg artifacts 
 
 before_build:
   # Check SDKs
   - ECHO "Installed SDKs:"
-  - ps: "ls \"C:/Program Files/Microsoft SDKs/Windows\""
+  - ps: 'ls "C:\Program Files (x86)\Microsoft SDKs\Windows\"'
   # Generates a temporary SNK. Not for real signing
-  - cmd: "\"C:/Program Files/Microsoft SDKs/Windows/v7.1/Bin/sn.exe\" -k winsw_key.snk"
+  - cmd: '"C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools\sn.exe" -k winsw_key.snk'
 
-assembly_info:
-  patch: true
-  file: "**\\AssemblyInfo.*"
-  assembly_version:  $(appveyor_build_version)
-  assembly_file_version:  $(appveyor_build_version)
-  assembly_informational_version: '$(appveyor_build_version)-rc'
-  
-build:
-  parallel: true 
-  project:  src\winsw.sln 
+build_script:
+  - dotnet.exe build src\winsw.sln
+  - dotnet.exe publish -f netcoreapp3.1 src\Core\ServiceWrapper\winsw.csproj
+  - dotnet.exe publish -f netcoreapp3.1 -r win-x64 src\Core\ServiceWrapper\winsw.csproj /p:PublishSingleFile=true /p:PublishTrimmed=true
+  - dotnet.exe publish -f netcoreapp3.1 -r win-x86 src\Core\ServiceWrapper\winsw.csproj /p:PublishSingleFile=true /p:PublishTrimmed=true
 
 after_build:
   - ps: nuget pack WinSW.nuspec -Version $env:APPVEYOR_BUILD_VERSION
 
 test_script:
-# Runner for NUnit2
-- ps: nunit-console 'src/Test/winswTests/bin/Release/winswTests.dll' 'src/Test/winswTests/bin/Release/SharedDirectoryMapper.dll' 'src/Test/winswTests/bin/Release/RunawayProcessKiller.dll'
+  - dotnet.exe test --no-build src\Test\winswTests\winswTests.csproj
 
 artifacts:
-  - path: 'src/Core/ServiceWrapper/bin/Release/WinSW.NET2.exe'
+  - path: artifacts\WinSW.NET2.exe
     name: WinSW.NET2.exe
-  - path: 'src/Core/ServiceWrapper_dotNET4/bin/Release/WinSW.NET4.exe'
+  - path: artifacts\WinSW.NET4.exe
     name: WinSW.NET4.exe
+  - path: artifacts\WinSW.NET461.exe
+    name: WinSW.NET461.exe
+  - path: artifacts\WinSW.NETCore31.zip
+    name: WinSW.NETCore31.zip
+  - path: artifacts\WinSW.NETCore31.x64.exe
+    name: WinSW.NETCore31.x64.exe
+  - path: artifacts\WinSW.NETCore31.x86.exe
+    name: WinSW.NETCore31.x86.exe
   - path: 'WinSW.$(appveyor_build_version).nupkg'
     name: WinSW.nupkg
-  - path: 'examples/sample-allOptions.xml'
+  - path: 'examples\sample-allOptions.xml'
     name: 'sample-allOptions.xml'
-  - path: 'examples/sample-minimal.xml'
+  - path: 'examples\sample-minimal.xml'
     name: 'sample-minimal.xml'
-
-
-
-  
